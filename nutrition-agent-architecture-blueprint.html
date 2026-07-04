@@ -1,0 +1,526 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nutrition Agent — Architecture Blueprint</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #ffffff;
+    color: #1f2328;
+    padding: 32px 16px 48px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 32px; }
+
+  /* ── Section headings ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #57606a;
+    margin: 32px 0 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  /* ── Layer diagram ── */
+  .diagram { display: flex; flex-direction: column; gap: 6px; }
+
+  .layer {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f7f8fa;
+    padding: 12px 16px;
+    position: relative;
+  }
+  .layer-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #57606a;
+    margin-bottom: 8px;
+  }
+  .layer.accent  { border-left: 3px solid #3b82d4; }
+  .layer.purple  { border-left: 3px solid #7c5cd8; }
+  .layer.green   { border-left: 3px solid #2da44e; }
+  .layer.orange  { border-left: 3px solid #bc6b00; }
+  .layer.red     { border-left: 3px solid #cf222e; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .chip-blue   { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+  .chip-purple { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+  .chip-green  { background: #dcfce7; color: #15803d; border-color: #86efac; }
+  .chip-orange { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .chip-red    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .chip-gray   { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+  .arrow {
+    text-align: center;
+    color: #57606a;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 0;
+  }
+
+  /* ── API table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: #f7f8fa;
+    font-weight: 700;
+    text-align: left;
+    padding: 7px 10px;
+    border: 1px solid #e5e7eb;
+    color: #57606a;
+    font-size: 12px;
+  }
+  td {
+    padding: 7px 10px;
+    border: 1px solid #e5e7eb;
+    vertical-align: top;
+  }
+  tr:hover td { background: #f7f8fa; }
+  .method {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    min-width: 44px;
+    text-align: center;
+  }
+  .m-post   { background: #dcfce7; color: #15803d; }
+  .m-get    { background: #dbeafe; color: #1e40af; }
+  .m-put    { background: #fef3c7; color: #92400e; }
+  .m-delete { background: #fee2e2; color: #991b1b; }
+
+  /* ── Data flow ── */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .flow-step {
+    flex: 1;
+    padding: 10px 12px;
+    background: #f7f8fa;
+    border-right: 1px solid #e5e7eb;
+    position: relative;
+  }
+  .flow-step:last-child { border-right: none; }
+  .flow-num {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82d4;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 18px;
+    margin-bottom: 4px;
+  }
+  .flow-step-title { font-weight: 600; font-size: 12px; display: block; }
+  .flow-step-desc  { color: #57606a; font-size: 11px; margin-top: 2px; }
+
+  /* ── Config / env cards ── */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .card-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+  .card-kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
+  .card-key   { color: #57606a; font-weight: 600; }
+  .card-val   { color: #1f2328; font-family: "Cascadia Code", "Consolas", monospace; }
+
+  /* ── DB schema ── */
+  .schema {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .schema-header {
+    background: #1f2328;
+    color: #f0f6fc;
+    padding: 7px 12px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .schema-row {
+    display: grid;
+    grid-template-columns: 160px 100px 1fr;
+    padding: 5px 12px;
+    border-top: 1px solid #e5e7eb;
+    align-items: baseline;
+  }
+  .schema-row:nth-child(even) { background: #f7f8fa; }
+  .col-name { font-family: "Cascadia Code", "Consolas", monospace; font-weight: 600; }
+  .col-type { color: #7c5cd8; font-family: "Cascadia Code", "Consolas", monospace; font-size: 12px; }
+  .col-note { color: #57606a; font-size: 12px; }
+  .pk { color: #bc6b00; font-size: 10px; font-weight: 700; margin-left: 5px; vertical-align: middle; }
+
+  /* ── Legend ── */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; margin-top: 24px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Nutrition Agent — Architecture Blueprint</h1>
+  <p class="subtitle">NutriBot · Flask + IBM Watsonx.ai Granite-4 · SQLite · Python 3.12</p>
+
+  
+  <div class="section-label">System Layers</div>
+  <div class="diagram">
+
+    <div class="layer accent">
+      <div class="layer-title">🖥 Client — Browser</div>
+      <div class="chip-row">
+        <span class="chip chip-blue">index.html — Landing</span>
+        <span class="chip chip-blue">dashboard.html</span>
+        <span class="chip chip-blue">meal_plan.html</span>
+        <span class="chip chip-blue">bmi.html</span>
+        <span class="chip chip-blue">profiles.html</span>
+        <span class="chip chip-gray">static/js/app.js</span>
+        <span class="chip chip-gray">static/css/style.css</span>
+        <span class="chip chip-gray">Bootstrap 5 + Font Awesome</span>
+      </div>
+    </div>
+
+    <div class="arrow">↕ HTTP / JSON REST</div>
+
+    <div class="layer green">
+      <div class="layer-title">🌐 Web Server — Flask (app.py)</div>
+      <div class="chip-row">
+        <span class="chip chip-green">GET /</span>
+        <span class="chip chip-green">GET /dashboard</span>
+        <span class="chip chip-green">GET /meal-plan</span>
+        <span class="chip chip-green">GET /bmi</span>
+        <span class="chip chip-green">GET /profiles</span>
+        <span class="chip chip-gray">Jinja2 Templates</span>
+        <span class="chip chip-gray">Gunicorn (prod)</span>
+      </div>
+    </div>
+
+    <div class="arrow">↕ Blueprint dispatch</div>
+
+    <div class="layer orange">
+      <div class="layer-title">🔀 API Blueprints — routes/</div>
+      <div class="chip-row">
+        <span class="chip chip-orange">chat.py → POST /api/chat</span>
+        <span class="chip chip-orange">nutrition.py → POST /api/nutrition/analyse</span>
+        <span class="chip chip-orange">nutrition.py → POST /api/meal-plan/generate</span>
+        <span class="chip chip-orange">bmi.py → POST /api/bmi</span>
+        <span class="chip chip-orange">profiles.py → CRUD /api/profiles</span>
+      </div>
+    </div>
+
+    <div class="arrow">↕ Function calls</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div class="layer purple">
+        <div class="layer-title">🤖 AI Client — watsonx_client.py</div>
+        <div class="chip-row">
+          <span class="chip chip-purple">chat()</span>
+          <span class="chip chip-purple">analyse_nutrition()</span>
+          <span class="chip chip-purple">generate_meal_plan()</span>
+          <span class="chip chip-gray">_build_prompt()</span>
+          <span class="chip chip-gray">_call_model()</span>
+        </div>
+      </div>
+      <div class="layer red">
+        <div class="layer-title">🗄 Database — db.py (SQLite)</div>
+        <div class="chip-row">
+          <span class="chip chip-red">get_all_profiles()</span>
+          <span class="chip chip-red">get_profile()</span>
+          <span class="chip chip-red">create_profile()</span>
+          <span class="chip chip-red">update_profile()</span>
+          <span class="chip chip-red">delete_profile()</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↕ HTTPS / ibm_watsonx_ai SDK            ↕ sqlite3 (stdlib)</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div class="layer purple">
+        <div class="layer-title">☁ IBM Watsonx.ai — us-south</div>
+        <div class="chip-row">
+          <span class="chip chip-purple">ibm/granite-4-h-small</span>
+          <span class="chip chip-gray">ModelInference</span>
+          <span class="chip chip-gray">IAM API Key auth</span>
+        </div>
+      </div>
+      <div class="layer red">
+        <div class="layer-title">💾 nutrition.db (local file)</div>
+        <div class="chip-row">
+          <span class="chip chip-red">family_profiles table</span>
+          <span class="chip chip-gray">auto-created on startup</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  
+  <div class="section-label">Chat Request — Data Flow</div>
+  <div class="flow">
+    <div class="flow-step">
+      <span class="flow-num">1</span>
+      <span class="flow-step-title">Browser</span>
+      <span class="flow-step-desc">User types a message; app.js calls apiFetch("/api/chat", body)</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-num">2</span>
+      <span class="flow-step-title">chat.py</span>
+      <span class="flow-step-desc">Extracts message, profile_id, history; fetches profile from db.py</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-num">3</span>
+      <span class="flow-step-title">watsonx_client</span>
+      <span class="flow-step-desc">Injects AGENT_INSTRUCTIONS + profile context; builds Granite prompt</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-num">4</span>
+      <span class="flow-step-title">Granite-4</span>
+      <span class="flow-step-desc">Generates NutriBot reply via generate_text()</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-num">5</span>
+      <span class="flow-step-title">Browser</span>
+      <span class="flow-step-desc">JSON {success, data.reply} rendered in chat UI</span>
+    </div>
+  </div>
+
+  
+  <div class="section-label">API Endpoints</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Path</th>
+        <th>Blueprint</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="method m-post">POST</span></td>
+        <td>/api/chat</td>
+        <td>chat.py</td>
+        <td>Conversational nutrition agent reply (+ optional profile context)</td>
+      </tr>
+      <tr>
+        <td><span class="method m-post">POST</span></td>
+        <td>/api/nutrition/analyse</td>
+        <td>nutrition.py</td>
+        <td>Calorie &amp; macro breakdown for a list of food items (JSON)</td>
+      </tr>
+      <tr>
+        <td><span class="method m-post">POST</span></td>
+        <td>/api/meal-plan/generate</td>
+        <td>nutrition.py</td>
+        <td>Generate 1–7 day personalised meal plan for a saved profile</td>
+      </tr>
+      <tr>
+        <td><span class="method m-post">POST</span></td>
+        <td>/api/bmi</td>
+        <td>bmi.py</td>
+        <td>Compute BMI, category, healthy weight range (no AI)</td>
+      </tr>
+      <tr>
+        <td><span class="method m-get">GET</span></td>
+        <td>/api/profiles</td>
+        <td>profiles.py</td>
+        <td>List all family profiles</td>
+      </tr>
+      <tr>
+        <td><span class="method m-get">GET</span></td>
+        <td>/api/profiles/:id</td>
+        <td>profiles.py</td>
+        <td>Fetch a single profile</td>
+      </tr>
+      <tr>
+        <td><span class="method m-post">POST</span></td>
+        <td>/api/profiles</td>
+        <td>profiles.py</td>
+        <td>Create a new family member profile</td>
+      </tr>
+      <tr>
+        <td><span class="method m-put">PUT</span></td>
+        <td>/api/profiles/:id</td>
+        <td>profiles.py</td>
+        <td>Update an existing profile</td>
+      </tr>
+      <tr>
+        <td><span class="method m-delete">DELETE</span></td>
+        <td>/api/profiles/:id</td>
+        <td>profiles.py</td>
+        <td>Remove a profile</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+  <div class="section-label">Database Schema — nutrition.db</div>
+  <div class="schema">
+    <div class="schema-header">TABLE family_profiles</div>
+    <div class="schema-row">
+      <span class="col-name">id <span class="pk">PK</span></span>
+      <span class="col-type">INTEGER</span>
+      <span class="col-note">AUTOINCREMENT primary key</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">name</span>
+      <span class="col-type">TEXT</span>
+      <span class="col-note">NOT NULL</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">age</span>
+      <span class="col-type">INTEGER</span>
+      <span class="col-note">NOT NULL</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">gender</span>
+      <span class="col-type">TEXT</span>
+      <span class="col-note">NOT NULL</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">weight_kg</span>
+      <span class="col-type">REAL</span>
+      <span class="col-note">NOT NULL</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">height_cm</span>
+      <span class="col-type">REAL</span>
+      <span class="col-note">NOT NULL</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">activity_level</span>
+      <span class="col-type">TEXT</span>
+      <span class="col-note">DEFAULT 'Moderately Active'</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">dietary_restrictions</span>
+      <span class="col-type">TEXT</span>
+      <span class="col-note">DEFAULT '' — comma-separated flags</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">health_goals</span>
+      <span class="col-type">TEXT</span>
+      <span class="col-note">DEFAULT '' — free text</span>
+    </div>
+    <div class="schema-row">
+      <span class="col-name">created_at</span>
+      <span class="col-type">TEXT</span>
+      <span class="col-note">ISO-8601 UTC timestamp</span>
+    </div>
+  </div>
+
+  
+  <div class="section-label">Configuration — config.py + .env</div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">IBM Watsonx.ai</div>
+      <div class="card-kv">
+        <span class="card-key">Model</span>       <span class="card-val">granite-4-h-small</span>
+        <span class="card-key">Endpoint</span>    <span class="card-val">us-south.ml.cloud.ibm.com</span>
+        <span class="card-key">max_tokens</span>  <span class="card-val">1024</span>
+        <span class="card-key">temperature</span> <span class="card-val">0.7</span>
+        <span class="card-key">top_p</span>       <span class="card-val">0.95</span>
+        <span class="card-key">rep. penalty</span><span class="card-val">1.1</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Environment Variables</div>
+      <div class="card-kv">
+        <span class="card-key">IBM_API_KEY</span>          <span class="card-val">IAM key (.env)</span>
+        <span class="card-key">WATSONX_PROJECT_ID</span>   <span class="card-val">project UUID (.env)</span>
+        <span class="card-key">WATSONX_URL</span>          <span class="card-val">regional URL (.env)</span>
+        <span class="card-key">FLASK_SECRET_KEY</span>     <span class="card-val">session secret (.env)</span>
+        <span class="card-key">FLASK_ENV</span>            <span class="card-val">development / production</span>
+        <span class="card-key">MAX_HISTORY_TURNS</span>   <span class="card-val">10 (hardcoded)</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section-label">Agent System Prompt Sections (config.py → AGENT_INSTRUCTIONS)</div>
+  <div class="chip-row">
+    <span class="chip chip-purple">[ROLE] — NutriBot persona</span>
+    <span class="chip chip-purple">[TONE] — warm, encouraging</span>
+    <span class="chip chip-purple">[DIET_SPECIALIZATION] — 10 dietary contexts</span>
+    <span class="chip chip-purple">[INDIAN_FOOD_PREFERENCES] — regional cuisine knowledge</span>
+    <span class="chip chip-purple">[SAFETY_RULES] — 8 guard-rails</span>
+    <span class="chip chip-purple">[OUTPUT_FORMAT] — structured response rules</span>
+    <span class="chip chip-gray">+ [CURRENT USER PROFILE] injected at runtime</span>
+  </div>
+
+  
+  <div class="section-label">Key Dependencies (requirements.txt)</div>
+  <div class="chip-row">
+    <span class="chip chip-green">Flask 3.0</span>
+    <span class="chip chip-green">Gunicorn 22</span>
+    <span class="chip chip-purple">ibm-watsonx-ai 1.1.2</span>
+    <span class="chip chip-blue">pandas 2.1</span>
+    <span class="chip chip-blue">numpy 1.26</span>
+    <span class="chip chip-gray">python-dotenv 1.0</span>
+    <span class="chip chip-gray">requests 2.32</span>
+    <span class="chip chip-gray">sqlite3 (stdlib)</span>
+  </div>
+
+  <hr />
+
+  
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#3b82d4"></div> Client / Flask core</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#2da44e"></div> Web server layer</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#bc6b00"></div> API route blueprints</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#7c5cd8"></div> AI / Watsonx</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#cf222e"></div> Database / persistence</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#8b949e"></div> Infrastructure / config</div>
+  </div>
+
+  <footer>Made with IBM Bob</footer>
+
+</div>
+</body>
+</html>
